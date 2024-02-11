@@ -37,7 +37,7 @@ def save_video(video_url: str, directory: str = "../temp") -> str:
     return video_path
 
 
-def __generate_subtitles_assemblyai(audio_path: str) -> str:
+def __generate_subtitles_assemblyai(audio_path: str, voice: str) -> str:
     """
     Generates subtitles from a given audio file and returns the path to the subtitles.
 
@@ -48,8 +48,21 @@ def __generate_subtitles_assemblyai(audio_path: str) -> str:
         str: The generated subtitles
     """
 
+    language_mapping = {
+        "br": "pt",
+        "id": "en", #AssemblyAI doesn't have Indonesian 
+        "jp": "ja",
+        "kr": "ko",
+    }
+
+    if voice in language_mapping:
+        lang_code = language_mapping[voice]
+    else:
+        lang_code = voice
+
     aai.settings.api_key = ASSEMBLY_AI_API_KEY
-    transcriber = aai.Transcriber()
+    config = aai.TranscriptionConfig(language_code=lang_code)
+    transcriber = aai.Transcriber(config=config)
     transcript = transcriber.transcribe(audio_path)
     subtitles = transcript.export_subtitles_srt()
 
@@ -89,7 +102,7 @@ def __generate_subtitles_locally(sentences: List[str], audio_clips: List[AudioFi
     return "\n".join(subtitles)
 
 
-def generate_subtitles(audio_path: str, sentences: List[str], audio_clips: List[AudioFileClip]) -> str:
+def generate_subtitles(audio_path: str, sentences: List[str], audio_clips: List[AudioFileClip], voice: str) -> str:
     """
     Generates subtitles from a given audio file and returns the path to the subtitles.
 
@@ -111,7 +124,7 @@ def generate_subtitles(audio_path: str, sentences: List[str], audio_clips: List[
 
     if ASSEMBLY_AI_API_KEY is not None and ASSEMBLY_AI_API_KEY != "":
         print(colored("[+] Creating subtitles using AssemblyAI", "blue"))
-        subtitles = __generate_subtitles_assemblyai(audio_path)
+        subtitles = __generate_subtitles_assemblyai(audio_path, voice)
     else:
         print(colored("[+] Creating subtitles locally", "blue"))
         subtitles = __generate_subtitles_locally(sentences, audio_clips)
@@ -146,7 +159,7 @@ def combine_videos(video_paths: List[str], max_duration: int, max_clip_duration:
     video_id = uuid.uuid4()
     combined_video_path = f"../temp/{video_id}.mp4"
     
-    #required duration of each clip:
+    # Required duration of each clip
     req_dur = max_duration / len(video_paths)
 
     print(colored("[+] Combining videos...", "blue"))
@@ -154,7 +167,7 @@ def combine_videos(video_paths: List[str], max_duration: int, max_clip_duration:
 
     clips = []
     tot_dur = 0
-    #add downloaded clips over and over until the duration of the audio (max_duration) has been reached
+    # Add downloaded clips over and over until the duration of the audio (max_duration) has been reached
     while tot_dur < max_duration:
         for video_path in video_paths:
             clip = VideoFileClip(video_path)
@@ -184,8 +197,6 @@ def combine_videos(video_paths: List[str], max_duration: int, max_clip_duration:
 
             clips.append(clip)
             tot_dur += clip.duration
-            #if tot_dur >= max_duration:
-            #    break
 
     final_clip = concatenate_videoclips(clips)
     final_clip = final_clip.set_fps(30)
