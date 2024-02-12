@@ -76,6 +76,8 @@ def generate():
         print(colored("[Video to be generated]", "blue"))
         print(colored("   Subject: " + data["videoSubject"], "blue"))
         print(colored("   AI Model: " + ai_model, "blue"))  # Print the AI model being used
+        print(colored("   Custom Prompt: " + data["customPrompt"], "blue"))  # Print the AI model being used
+
 
 
         if not GENERATING:
@@ -98,7 +100,7 @@ def generate():
 
 
         # Generate a script
-        script = generate_script(data["videoSubject"], paragraph_number, ai_model, voice)  # Pass the AI model to the script generation
+        script = generate_script(data["videoSubject"], paragraph_number, ai_model, voice, data["customPrompt"])  # Pass the AI model to the script generation
 
         # Generate search terms
         search_terms = get_search_terms(
@@ -276,12 +278,12 @@ def generate():
                 except HttpError as e:
                     print(f"An HTTP error {e.resp.status} occurred:\n{e.content}")
 
+        video_clip = VideoFileClip(f"../temp/{final_video_path}")
         if use_music:
             # Select a random song
             song_path = choose_random_song()
 
             # Add song to video at 30% volume using moviepy
-            video_clip = VideoFileClip(f"../temp/{final_video_path}")
             original_duration = video_clip.duration
             original_audio = video_clip.audio
             song_clip = AudioFileClip(song_path).set_fps(44100)
@@ -294,6 +296,8 @@ def generate():
             video_clip = video_clip.set_audio(comp_audio)
             video_clip = video_clip.set_fps(30)
             video_clip = video_clip.set_duration(original_duration)
+            video_clip.write_videofile(f"../{final_video_path}", threads=n_threads or 1)
+        else:
             video_clip.write_videofile(f"../{final_video_path}", threads=n_threads or 1)
 
 
